@@ -1,0 +1,6 @@
+name: AdaptiveMarkets
+version: 1.0
+main: com.tchristofferson.adaptivemarkets.AdaptiveMarkets
+api-version: 1.14
+depend:
+  - Citizens
