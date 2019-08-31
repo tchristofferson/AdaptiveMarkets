@@ -1,7 +1,6 @@
 package com.tchristofferson.adaptivemarkets.core;
 
 import com.tchristofferson.adaptivemarkets.AdaptiveMarkets;
-import com.tchristofferson.adaptivemarkets.core.marketitems.*;
 import com.tchristofferson.pagedinventories.IPagedInventory;
 import com.tchristofferson.pagedinventories.PagedInventoryAPI;
 import com.tchristofferson.pagedinventories.handlers.PagedInventoryClickHandler;
@@ -25,9 +24,9 @@ import java.util.Map;
 
 public class Merchant implements Cloneable {
 
-    public static final ItemStack NEXT_ITEMSTACK;
-    public static final ItemStack PREV_ITEMSTACK;
-    public static final ItemStack CLOSE_ITEMSTACK;
+    private static final ItemStack NEXT_ITEMSTACK;
+    private static final ItemStack PREV_ITEMSTACK;
+    private static final ItemStack CLOSE_ITEMSTACK;
 
     private static final PagedInventoryClickHandler clickHandler;
 
@@ -69,7 +68,11 @@ public class Merchant implements Cloneable {
                         Merchant merchant = playerManager.listeningForSellRemoval.remove(player.getUniqueId());
                         merchant.removeItem(event.getInventory(), event.getSlot(), false);
                     };
-                } else return;
+                } else {
+                    runnable = () -> {
+                        //Buying or selling item
+                    };
+                }
 
                 Bukkit.getScheduler().runTask(adaptiveMarkets, runnable);
             }
@@ -77,8 +80,8 @@ public class Merchant implements Cloneable {
     }
 
     private final PagedInventoryAPI pagedInventoryAPI;
-    private final List<MarketBuyItem> buyItems;
-    private final List<MarketSellItem> sellItems;
+    private final List<MarketItem> buyItems;
+    private final List<MarketItem> sellItems;
     private IPagedInventory buyInventory;
     private IPagedInventory sellInventory;
     private String merchantType;
@@ -86,7 +89,7 @@ public class Merchant implements Cloneable {
     private Villager.Profession profession;
     private Villager.Type type;
 
-    public Merchant(PagedInventoryAPI pagedInventoryAPI, String merchantType, String displayName, List<MarketBuyItem> buyItems, List<MarketSellItem> sellItems, Villager.Profession profession, Villager.Type type) {
+    public Merchant(PagedInventoryAPI pagedInventoryAPI, String merchantType, String displayName, List<MarketItem> buyItems, List<MarketItem> sellItems, Villager.Profession profession, Villager.Type type) {
         this.pagedInventoryAPI = pagedInventoryAPI;
         this.buyItems = new ArrayList<>(buyItems);
         this.sellItems = new ArrayList<>(sellItems);
@@ -145,60 +148,22 @@ public class Merchant implements Cloneable {
         this.type = type;
     }
 
-    public List<MarketBuyItem> getBuyItems() {
+    public List<MarketItem> getBuyItems() {
         return buyItems;
     }
 
-    public List<MarketSellItem> getSellItems() {
+    public List<MarketItem> getSellItems() {
         return sellItems;
     }
 
-    public void addBuyItem(MarketBuyItemMaterial marketBuyItemMaterial) {
-        addBuyItem(((MarketBuyItem) marketBuyItemMaterial));
+    public void addBuyItem(MarketItem marketItem) {
+        buyItems.add(marketItem);
+        addItem(marketItem.getItemStack(), marketItem.getPrice(), true);
     }
 
-    public void addBuyItem(MarketBuyItemMeta marketBuyItem) {
-        addBuyItem(((MarketBuyItem) marketBuyItem));
-    }
-
-    private void addBuyItem(MarketBuyItem marketBuyItem) {
-        ItemStack itemStack;
-
-        if (marketBuyItem instanceof MarketBuyItemMaterial) {
-            MarketBuyItemMaterial marketBuyItemMaterial = (MarketBuyItemMaterial) marketBuyItem;
-            itemStack = new ItemStack(marketBuyItemMaterial.getMaterial());
-        } else {
-            MarketBuyItemMeta marketBuyItemMeta = (MarketBuyItemMeta) marketBuyItem;
-            itemStack = marketBuyItemMeta.getItemStack();
-            itemStack.setAmount(1);
-        }
-
-        buyItems.add(marketBuyItem);
-        addItem(itemStack, marketBuyItem.getPrice(), true);
-    }
-
-    public void addSellItem(MarketSellItemMaterial marketSellItem) {
-        addSellItem(((MarketSellItem) marketSellItem));
-    }
-
-    public void addSellItem(MarketSellItemMeta marketSellItemMeta) {
-        addSellItem(((MarketSellItem) marketSellItemMeta));
-    }
-
-    private void addSellItem(MarketSellItem marketSellItem) {
-        ItemStack itemStack;
-
-        if (marketSellItem instanceof MarketSellItemMaterial) {
-            MarketSellItemMaterial marketSellItemMaterial = (MarketSellItemMaterial) marketSellItem;
-            itemStack = new ItemStack(marketSellItemMaterial.getMaterial());
-        } else {
-            MarketSellItemMeta marketSellItemMeta = (MarketSellItemMeta) marketSellItem;
-            itemStack = marketSellItemMeta.getItemStack();
-            itemStack.setAmount(1);
-        }
-
-        sellItems.add(marketSellItem);
-        addItem(itemStack, marketSellItem.getPrice(), false);
+    public void addSellItem(MarketItem marketItem) {
+        sellItems.add(marketItem);
+        addItem(marketItem.getItemStack(), marketItem.getPrice(), false);
     }
 
     private void removeItem(Inventory inventory, int slot, boolean isBuyInventory) {

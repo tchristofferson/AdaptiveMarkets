@@ -1,22 +1,32 @@
-package com.tchristofferson.adaptivemarkets.core.marketitems;
+package com.tchristofferson.adaptivemarkets.core;
 
 import org.apache.commons.lang.Validate;
+import org.bukkit.inventory.ItemStack;
 
 public class MarketItem {
 
+    private final ItemStack itemStack;
     private double price;
     private double priceChange;
     private double minPrice;
     private double maxPrice;
     private int priceChangeCondition;
+    private int supply;
 
-    protected MarketItem(double price, double priceChange, int priceChangeCondition, double minPrice, double maxPrice) {
+    public MarketItem(ItemStack itemStack, double price, double priceChange, int priceChangeCondition, double minPrice, double maxPrice, int supply) {
+        this.itemStack = itemStack;
         this.price = price;
         this.priceChange = priceChange;
         this.priceChangeCondition = priceChangeCondition;
         Validate.isTrue(price <= maxPrice && price >= minPrice, "Price isn't between min and max price!");
         this.minPrice = minPrice;
         this.maxPrice = maxPrice;
+        this.supply = supply;
+        this.itemStack.setAmount(1);
+    }
+
+    public ItemStack getItemStack() {
+        return itemStack;
     }
 
     public double getPrice() {
@@ -57,5 +67,13 @@ public class MarketItem {
 
     public void setMaxPrice(double maxPrice) {
         this.maxPrice = maxPrice;
+    }
+
+    public int getSupply() {
+        return supply;
+    }
+
+    public void setSupply(int supply) {
+        this.supply = supply;
     }
 }

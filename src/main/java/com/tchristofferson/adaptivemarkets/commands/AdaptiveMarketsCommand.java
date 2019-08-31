@@ -3,10 +3,10 @@ package com.tchristofferson.adaptivemarkets.commands;
 import co.aikar.commands.BaseCommand;
 import co.aikar.commands.annotation.*;
 import com.tchristofferson.adaptivemarkets.AdaptiveMarkets;
+import com.tchristofferson.adaptivemarkets.core.MarketItem;
 import com.tchristofferson.adaptivemarkets.core.Merchant;
 import com.tchristofferson.adaptivemarkets.core.MerchantManager;
 import com.tchristofferson.adaptivemarkets.core.PlayerManager;
-import com.tchristofferson.adaptivemarkets.core.marketitems.*;
 import com.tchristofferson.pagedinventories.PagedInventoryAPI;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
@@ -114,29 +114,23 @@ public class AdaptiveMarketsCommand extends BaseCommand {
             return;
         }
 
-        if (holding.hasItemMeta()) {
-            MarketBuyItemMeta marketBuyItem = new MarketBuyItemMeta(price, priceChange, priceChangeCondition, supply, minPrice, maxPrice, holding);
-            merchant.addBuyItem(marketBuyItem);
-        } else {
-            MarketBuyItemMaterial marketBuyItem = new MarketBuyItemMaterial(price, priceChange, priceChangeCondition, supply, minPrice, maxPrice, holding.getType());
-            merchant.addBuyItem(marketBuyItem);
-        }
-
+        MarketItem marketItem = new MarketItem(holding, price, priceChange, priceChangeCondition, minPrice, maxPrice, supply);
+        merchant.addBuyItem(marketItem);
         player.sendMessage(ChatColor.GREEN + "Successfully added item to merchant's buy inventory!");
     }
 
     @Subcommand("addSellItem|asi")
-    @Syntax("<merchantType> <price> <priceChange> <priceIncreaseCondition> <money> <minPrice> <maxPrice> &e- Add the item your holding to the merchant's sell inventory so they can buy it from players")
+    @Syntax("<merchantType> <price> <priceChange> <priceIncreaseCondition> <supply> <minPrice> <maxPrice> &e- Add the item your holding to the merchant's sell inventory so they can buy it from players")
     @CommandPermission(Permissions.MODIFY_ITEMS)
     public void addSellItem(Player player, String merchantType, double price, double priceChange, int priceChangeCondition,
-                            double money, double minPrice, double maxPrice) {
+                            int supply, double minPrice, double maxPrice) {
         ItemStack holding = player.getInventory().getItemInMainHand();
         if (holding.getType().name().endsWith("AIR")) {
             player.sendMessage(ChatColor.RED + "Hold the item you want to add!");
             return;
         }
 
-        if (handleNumberChecksFails(player, price, priceChange, money, minPrice, maxPrice))
+        if (handleNumberChecksFails(player, price, priceChange, supply, minPrice, maxPrice))
             return;
 
         if (priceChangeCondition < 1) {
@@ -151,14 +145,8 @@ public class AdaptiveMarketsCommand extends BaseCommand {
             return;
         }
 
-        if (holding.hasItemMeta()) {
-            MarketSellItemMeta marketSellItem = new MarketSellItemMeta(price, priceChange, priceChangeCondition, minPrice, maxPrice, money, holding);
-            merchant.addSellItem(marketSellItem);
-        } else {
-            MarketSellItemMaterial marketSellItem = new MarketSellItemMaterial(price, priceChange, priceChangeCondition, minPrice, maxPrice, money, holding.getType());
-            merchant.addSellItem(marketSellItem);
-        }
-
+        MarketItem marketItem = new MarketItem(holding, price, priceChange, priceChangeCondition, minPrice, maxPrice, supply);
+        merchant.addSellItem(marketItem);
         player.sendMessage(ChatColor.GREEN + "Successfully added item to merchant's sell inventory!");
     }
 
