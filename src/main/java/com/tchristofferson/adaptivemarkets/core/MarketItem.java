@@ -34,6 +34,7 @@ public class MarketItem {
     }
 
     public void setPrice(double price) {
+        Validate.isTrue(price > minPrice, "Cannot set the price lower than minPrice!");
         this.price = price;
     }
 
@@ -58,6 +59,7 @@ public class MarketItem {
     }
 
     public void setMinPrice(double minPrice) {
+        Validate.isTrue(minPrice < maxPrice, "minPrice must be less than maxPrice!");
         this.minPrice = minPrice;
     }
 
@@ -66,6 +68,7 @@ public class MarketItem {
     }
 
     public void setMaxPrice(double maxPrice) {
+        Validate.isTrue(maxPrice > minPrice, "maxPrice must be greater than minPrice!");
         this.maxPrice = maxPrice;
     }
 
@@ -74,6 +77,7 @@ public class MarketItem {
     }
 
     public void setSupply(int supply) {
+        Validate.isTrue(supply >= 0, "Supply must be greater than or equal to zero!");
         this.supply = supply;
     }
 }
