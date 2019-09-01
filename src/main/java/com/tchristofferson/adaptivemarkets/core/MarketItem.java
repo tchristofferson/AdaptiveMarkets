@@ -10,15 +10,18 @@ public class MarketItem {
     private double priceChange;
     private double minPrice;
     private double maxPrice;
+    //Buy inventory: How many items have to be unsold for the price to lower
+    //Sell inventory: If the merchant doesn't buy this many items the price rises
     private int priceChangeCondition;
     private int supply;
 
     public MarketItem(ItemStack itemStack, double price, double priceChange, int priceChangeCondition, double minPrice, double maxPrice, int supply) {
-        this.itemStack = itemStack;
+        Validate.isTrue(price <= maxPrice && price >= minPrice, "Price isn't between min and max price!");
+        Validate.isTrue(supply >= 0, "Supply cannot be less than zero!");
+        this.itemStack = itemStack.clone();
         this.price = price;
         this.priceChange = priceChange;
         this.priceChangeCondition = priceChangeCondition;
-        Validate.isTrue(price <= maxPrice && price >= minPrice, "Price isn't between min and max price!");
         this.minPrice = minPrice;
         this.maxPrice = maxPrice;
         this.supply = supply;
@@ -26,7 +29,7 @@ public class MarketItem {
     }
 
     public ItemStack getItemStack() {
-        return itemStack;
+        return itemStack.clone();
     }
 
     public double getPrice() {

@@ -56,22 +56,57 @@ public class Merchant implements Cloneable {
                 PlayerManager playerManager = adaptiveMarkets.getPlayerManager();
                 Runnable runnable;
 
-                if (playerManager.listeningForBuyRemoval.containsKey(player.getUniqueId())) {
-                    runnable = () -> {
-                        player.closeInventory();
-                        Merchant merchant = playerManager.listeningForBuyRemoval.remove(player.getUniqueId());
-                        merchant.removeItem(event.getInventory(), event.getSlot(), true);
-                    };
-                } else if (playerManager.listeningForSellRemoval.containsKey(player.getUniqueId())) {
-                    runnable = () -> {
-                        player.closeInventory();
-                        Merchant merchant = playerManager.listeningForSellRemoval.remove(player.getUniqueId());
-                        merchant.removeItem(event.getInventory(), event.getSlot(), false);
-                    };
+                if (playerManager.getListeningForBuyRemoval(player) != null) {
+                    Merchant merchant = playerManager.removeListeningForBuyRemoval(player);
+                    merchant.removeItem(event.getInventory(), event.getSlot(), true);
+                    runnable = player::closeInventory;
+                } else if (playerManager.getListeningForSellRemoval(player) != null) {
+                    Merchant merchant = playerManager.removeListeningForSellRemoval(player);
+                    merchant.removeItem(event.getInventory(), event.getSlot(), false);
+                    runnable = player::closeInventory;
                 } else {
-                    runnable = () -> {
-                        //Buying or selling item
-                    };
+                    Inventory clickedInventory = event.getClickedInventory();
+                    ItemStack clickedItem = event.getCurrentItem();
+                    if (clickedInventory == null || clickedItem == null || clickedItem.getType().name().endsWith("AIR"))
+                        return;
+                    String inventoryName = ChatColor.stripColor(event.getView().getTitle());
+                    IPagedInventory pagedInventory = handler.getPagedInventory();
+                    int page = -1;
+
+                    for (int i = 0; i < pagedInventory.getSize(); i++) {
+                        if (pagedInventory.getPage(i).equals(event.getClickedInventory())) {
+                            page = i;
+                            break;
+                        }
+                    }
+
+                    int index = getIndex(page, event.getSlot());
+
+                    if (inventoryName.endsWith(" - Buy")) {
+                        //TODO: Use vault to take from player balance
+                        Merchant merchant = playerManager.getCurrentMerchant(player);
+                        MarketItem marketItem = merchant.buyItems.get(index);
+                        ItemStack itemStack = marketItem.getItemStack();
+                        player.getInventory().addItem(itemStack);
+                    } else if (inventoryName.endsWith(" - Sell") && !clickedInventory.equals(player.getInventory())) {
+                        //TODO: Use vault to add to player's balance
+                        Merchant merchant = playerManager.getCurrentMerchant(player);
+                        MarketItem marketItem = merchant.sellItems.get(index);
+                        ItemStack itemStack = marketItem.getItemStack();
+                        Inventory playerInventory = player.getInventory();
+
+                        for (int i = 0; i < playerInventory.getSize(); i++) {
+                            ItemStack is = playerInventory.getItem(i);
+
+                            if (itemStack.isSimilar(is)) {
+                                is.setAmount(is.getAmount() - 1);
+                                playerInventory.setItem(i, is);
+                                break;
+                            }
+                        }
+                    }
+
+                    return;
                 }
 
                 Bukkit.getScheduler().runTask(adaptiveMarkets, runnable);
@@ -106,6 +141,7 @@ public class Merchant implements Cloneable {
 
         loadInventories();
         this.pagedInventoryAPI.getRegistrar().addClickHandler(this.buyInventory, clickHandler);
+        this.pagedInventoryAPI.getRegistrar().addClickHandler(this.sellInventory, clickHandler);
     }
 
     public void openBuyInventory(Player player) {
@@ -172,7 +208,7 @@ public class Merchant implements Cloneable {
         IPagedInventory buyOrSell = isBuyInventory ? buyInventory : sellInventory;
         for (int i = 0; i < buyOrSell.getSize(); i++) {
             if (buyOrSell.getPage(i).equals(inventory)) {
-                index = (i * 44) + slot + i;
+                index = getIndex(i, slot);
                 break;
             }
         }
@@ -278,5 +314,10 @@ public class Merchant implements Cloneable {
             if (pageIndex > maxPageIndex) pageIndex = maxPageIndex;
             pagedInventory.open(player, pageIndex);
         });
+    }
+
+    //Method to get the index of the MarketItem in buyItems/sellItems
+    private static int getIndex(int page, int slot) {
+        return (page * 44) + slot + page;
     }
 }

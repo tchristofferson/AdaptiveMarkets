@@ -13,11 +13,10 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.plugin.Plugin;
 
 public class InventoryListener implements Listener {
 
-    private final Plugin plugin;
+    private final AdaptiveMarkets plugin;
     private final MerchantManager merchantManager;
 
     public InventoryListener(AdaptiveMarkets plugin) {
@@ -42,6 +41,7 @@ public class InventoryListener implements Listener {
 
         if (itemStack.getType() == Material.GREEN_STAINED_GLASS_PANE) {
             Merchant merchant = merchantManager.removeInteractingMerchant(player);
+            plugin.getPlayerManager().setCurrentMerchant(player, merchant);
 
             if (player.hasPermission(Permissions.USE_BUY_INV)) {
                 Bukkit.getScheduler().runTask(plugin, () -> merchant.openBuyInventory(player));
@@ -54,6 +54,7 @@ public class InventoryListener implements Listener {
             });
         } else if (itemStack.getType() == Material.RED_STAINED_GLASS_PANE) {
             Merchant merchant = merchantManager.removeInteractingMerchant(player);
+            plugin.getPlayerManager().setCurrentMerchant(player, merchant);
 
             if (player.hasPermission(Permissions.USE_SELL_INV)) {
                 Bukkit.getScheduler().runTask(plugin, () -> merchant.openSellInventory(player));
