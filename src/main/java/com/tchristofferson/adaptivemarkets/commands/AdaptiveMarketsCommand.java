@@ -3,10 +3,8 @@ package com.tchristofferson.adaptivemarkets.commands;
 import co.aikar.commands.BaseCommand;
 import co.aikar.commands.annotation.*;
 import com.tchristofferson.adaptivemarkets.AdaptiveMarkets;
-import com.tchristofferson.adaptivemarkets.core.MarketItem;
-import com.tchristofferson.adaptivemarkets.core.Merchant;
-import com.tchristofferson.adaptivemarkets.core.MerchantManager;
-import com.tchristofferson.adaptivemarkets.core.PlayerManager;
+import com.tchristofferson.adaptivemarkets.core.*;
+import com.tchristofferson.adaptivemarkets.core.MarketItemStack;
 import com.tchristofferson.pagedinventories.PagedInventoryAPI;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
@@ -114,8 +112,8 @@ public class AdaptiveMarketsCommand extends BaseCommand {
             return;
         }
 
-        MarketItem marketItem = new MarketItem(holding, price, priceChange, priceChangeCondition, minPrice, maxPrice, supply);
-        merchant.addBuyItem(marketItem);
+        MarketItemStack marketItemStack = new MarketItemStack(holding, price, priceChange, minPrice, maxPrice, priceChangeCondition, supply);
+        merchant.addBuyItem(marketItemStack);
         player.sendMessage(ChatColor.GREEN + "Successfully added item to merchant's buy inventory!");
     }
 
@@ -145,8 +143,8 @@ public class AdaptiveMarketsCommand extends BaseCommand {
             return;
         }
 
-        MarketItem marketItem = new MarketItem(holding, price, priceChange, priceChangeCondition, minPrice, maxPrice, supply);
-        merchant.addSellItem(marketItem);
+        MarketItemStack marketItemStack = new MarketItemStack(holding, price, priceChange, minPrice, maxPrice, priceChangeCondition, supply);
+        merchant.addSellItem(marketItemStack);
         player.sendMessage(ChatColor.GREEN + "Successfully added item to merchant's sell inventory!");
     }
 

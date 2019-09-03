@@ -2,10 +2,12 @@ package com.tchristofferson.adaptivemarkets.core;
 
 import org.apache.commons.lang.Validate;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 
-public class MarketItem {
+import java.util.List;
 
-    private final ItemStack itemStack;
+public class MarketItemStack extends ItemStack {
+
     private double price;
     private double priceChange;
     private double minPrice;
@@ -14,22 +16,24 @@ public class MarketItem {
     //Sell inventory: If the merchant doesn't buy this many items the price rises
     private int priceChangeCondition;
     private int supply;
+    private List<String> originalLore;
 
-    public MarketItem(ItemStack itemStack, double price, double priceChange, int priceChangeCondition, double minPrice, double maxPrice, int supply) {
-        Validate.isTrue(price <= maxPrice && price >= minPrice, "Price isn't between min and max price!");
-        Validate.isTrue(supply >= 0, "Supply cannot be less than zero!");
-        this.itemStack = itemStack.clone();
+    public MarketItemStack(ItemStack stack, double price, double priceChange, double minPrice, double maxPrice,
+                           int priceChangeCondition, int supply) throws IllegalArgumentException {
+        super(stack);
         this.price = price;
         this.priceChange = priceChange;
-        this.priceChangeCondition = priceChangeCondition;
         this.minPrice = minPrice;
         this.maxPrice = maxPrice;
+        this.priceChangeCondition = priceChangeCondition;
         this.supply = supply;
-        this.itemStack.setAmount(1);
+        this.originalLore = stack.getItemMeta().getLore();
+        setAmount(1);
     }
 
-    public ItemStack getItemStack() {
-        return itemStack.clone();
+    private MarketItemStack(MarketItemStack marketItemStack) {
+        this(marketItemStack, marketItemStack.price, marketItemStack.priceChange, marketItemStack.minPrice,
+                marketItemStack.maxPrice, marketItemStack.priceChangeCondition, marketItemStack.supply);
     }
 
     public double getPrice() {
@@ -82,5 +86,21 @@ public class MarketItem {
     public void setSupply(int supply) {
         Validate.isTrue(supply >= 0, "Supply must be greater than or equal to zero!");
         this.supply = supply;
+    }
+
+    //Returns the original item the player is trying to buy or sell
+    //Returns a clone without the lore that is added for the inventory GUIs
+    public MarketItemStack getOriginalStack() {
+        MarketItemStack marketItemStack = clone();
+        ItemMeta itemMeta = marketItemStack.getItemMeta();
+        itemMeta.setLore(this.originalLore);
+        marketItemStack.setItemMeta(itemMeta);
+
+        return marketItemStack;
+    }
+
+    @Override
+    public MarketItemStack clone() {
+        return new MarketItemStack(this);
     }
 }
