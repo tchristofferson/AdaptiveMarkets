@@ -3,8 +3,10 @@ package com.tchristofferson.adaptivemarkets.commands;
 import co.aikar.commands.BaseCommand;
 import co.aikar.commands.annotation.*;
 import com.tchristofferson.adaptivemarkets.AdaptiveMarkets;
-import com.tchristofferson.adaptivemarkets.core.*;
-import com.tchristofferson.adaptivemarkets.core.MarketItemStack;
+import com.tchristofferson.adaptivemarkets.core.MarketItemInfo;
+import com.tchristofferson.adaptivemarkets.core.Merchant;
+import com.tchristofferson.adaptivemarkets.core.MerchantManager;
+import com.tchristofferson.adaptivemarkets.core.PlayerManager;
 import com.tchristofferson.pagedinventories.PagedInventoryAPI;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
@@ -12,8 +14,8 @@ import org.bukkit.entity.Player;
 import org.bukkit.entity.Villager;
 import org.bukkit.inventory.ItemStack;
 
-import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 
 @CommandAlias("adaptiveMarkets|adaptiveMarket|aMarkets|am")
 public class AdaptiveMarketsCommand extends BaseCommand {
@@ -68,7 +70,7 @@ public class AdaptiveMarketsCommand extends BaseCommand {
             return;
         }
 
-        Merchant merchant = new Merchant(pagedInventoryAPI, merchantType, displayName.replace("_", " "), new ArrayList<>(), new ArrayList<>(), profession, type);
+        Merchant merchant = new Merchant(pagedInventoryAPI, merchantType, displayName.replace("_", " "), new HashMap<>(), new HashMap<>(), profession, type);
         merchantManager.addMerchant(merchantType, merchant);
         sender.sendMessage(ChatColor.GREEN + "Successfully create merchant!");
     }
@@ -112,8 +114,9 @@ public class AdaptiveMarketsCommand extends BaseCommand {
             return;
         }
 
-        MarketItemStack marketItemStack = new MarketItemStack(holding, price, priceChange, minPrice, maxPrice, priceChangeCondition, supply);
-        merchant.addBuyItem(marketItemStack);
+        ItemStack clone = holding.clone();
+        MarketItemInfo marketItemInfo = new MarketItemInfo(clone, price, priceChange, minPrice, maxPrice, priceChangeCondition, supply);
+        merchant.addBuyItem(clone, marketItemInfo, true);
         player.sendMessage(ChatColor.GREEN + "Successfully added item to merchant's buy inventory!");
     }
 
@@ -143,8 +146,9 @@ public class AdaptiveMarketsCommand extends BaseCommand {
             return;
         }
 
-        MarketItemStack marketItemStack = new MarketItemStack(holding, price, priceChange, minPrice, maxPrice, priceChangeCondition, supply);
-        merchant.addSellItem(marketItemStack);
+        ItemStack clone = holding.clone();
+        MarketItemInfo marketItemStack = new MarketItemInfo(clone, price, priceChange, minPrice, maxPrice, priceChangeCondition, supply);
+        merchant.addSellItem(clone, marketItemStack, true);
         player.sendMessage(ChatColor.GREEN + "Successfully added item to merchant's sell inventory!");
     }
 
@@ -159,8 +163,8 @@ public class AdaptiveMarketsCommand extends BaseCommand {
             return;
         }
 
-        playerManager.listenForBuyRemoval(player, merchant);
         merchant.openBuyInventory(player);
+        playerManager.listenForBuyRemoval(player, merchant);
     }
 
     @Subcommand("removeSellItem|rsi")

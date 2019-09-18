@@ -38,7 +38,7 @@ public class AdaptiveMarkets extends JavaPlugin {
         pagedInventoryAPI = new PagedInventoryAPI(this);
 
         Map<String, Merchant> map = new HashMap<>(1);
-        map.put("DEFAULT", new Merchant(pagedInventoryAPI, "DEFAULT", "&cDefault Merchant", new ArrayList<>(), new ArrayList<>(), Villager.Profession.NONE, Villager.Type.PLAINS));
+        map.put("DEFAULT", new Merchant(pagedInventoryAPI, "DEFAULT", "&cDefault Merchant", new HashMap<>(), new HashMap<>(), Villager.Profession.NONE, Villager.Type.PLAINS));
         Map<String, List<NPC>> spawnedMap = new HashMap<>();
         spawnedMap.put("DEFAULT", new ArrayList<>());
         merchantManager = new MerchantManager(map, spawnedMap);

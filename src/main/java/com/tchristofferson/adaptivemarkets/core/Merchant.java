@@ -17,11 +17,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.function.Predicate;
+import java.util.*;
 
 public class Merchant implements Cloneable {
 
@@ -71,7 +67,6 @@ public class Merchant implements Cloneable {
                     if (clickedInventory == null || clickedItem == null || clickedItem.getType().name().endsWith("AIR"))
                         return;
 
-                    Validate.isTrue(clickedItem instanceof MarketItemStack, "The clicked item wasn't an instance of MarketItemStack!");
                     String inventoryName = ChatColor.stripColor(event.getView().getTitle());
                     IPagedInventory pagedInventory = handler.getPagedInventory();
                     int page = -1;
@@ -84,17 +79,17 @@ public class Merchant implements Cloneable {
                     }
 
                     Merchant merchant = playerManager.getCurrentMerchant(player);
-                    MarketItemStack marketItemStack = (MarketItemStack) clickedItem;
                     int index = getIndex(page, event.getSlot());
 
                     if (inventoryName.endsWith(" - Buy")) {
                         //TODO: Use vault to take from player balance
-                        if (adaptiveMarkets.getEconomy().getBalance(player) >= marketItemStack.getPrice()) {
+                        MarketItemInfo marketItemInfo = merchant.buyItems.get(clickedItem);
+                        if (adaptiveMarkets.getEconomy().getBalance(player) >= marketItemInfo.getPrice()) {
                             Bukkit.getScheduler().runTask(adaptiveMarkets, () -> {
-                                Map<Integer, ItemStack> notAdded = player.getInventory().addItem(marketItemStack);
+                                Map<Integer, ItemStack> notAdded = player.getInventory().addItem(clickedItem);
                                 if (notAdded.isEmpty()) {
-                                    adaptiveMarkets.getEconomy().withdrawPlayer(player, marketItemStack.getPrice());
-                                    player.sendMessage(ChatColor.GREEN + "Successfully bought item for $" + marketItemStack.getPrice());
+                                    adaptiveMarkets.getEconomy().withdrawPlayer(player, marketItemInfo.getPrice());
+                                    player.sendMessage(ChatColor.GREEN + "Successfully bought item for $" + marketItemInfo.getPrice());
                                 }
                             });
                         }
@@ -105,7 +100,7 @@ public class Merchant implements Cloneable {
                         for (int i = 0; i < playerInventory.getSize(); i++) {
                             ItemStack is = playerInventory.getItem(i);
 
-                            if (marketItemStack.isSimilar(is)) {
+                            if (clickedItem.isSimilar(is)) {
                                 is.setAmount(is.getAmount() - 1);
                                 playerInventory.setItem(i, is);
                                 break;
@@ -122,8 +117,8 @@ public class Merchant implements Cloneable {
     }
 
     private final PagedInventoryAPI pagedInventoryAPI;
-    private final List<MarketItemStack> buyItems;
-    private final List<MarketItemStack> sellItems;
+    private final Map<ItemStack, MarketItemInfo> buyItems;
+    private final Map<ItemStack, MarketItemInfo> sellItems;
     private IPagedInventory buyInventory;
     private IPagedInventory sellInventory;
     private String merchantType;
@@ -131,7 +126,7 @@ public class Merchant implements Cloneable {
     private Villager.Profession profession;
     private Villager.Type type;
 
-    public Merchant(PagedInventoryAPI pagedInventoryAPI, String merchantType, String displayName, List<MarketItemStack> buyItems, List<MarketItemStack> sellItems, Villager.Profession profession, Villager.Type type) {
+    public Merchant(PagedInventoryAPI pagedInventoryAPI, String merchantType, String displayName, Map<ItemStack, MarketItemInfo> buyItems, Map<ItemStack, MarketItemInfo> sellItems, Villager.Profession profession, Villager.Type type) {
         this.pagedInventoryAPI = pagedInventoryAPI;
         this.buyInventory = pagedInventoryAPI.createPagedInventory(NEXT_ITEMSTACK, PREV_ITEMSTACK, CLOSE_ITEMSTACK);
         this.sellInventory = pagedInventoryAPI.createPagedInventory(NEXT_ITEMSTACK, PREV_ITEMSTACK, CLOSE_ITEMSTACK);
@@ -141,8 +136,8 @@ public class Merchant implements Cloneable {
         this.type = type;
         this.buyInventory.addPage(createInventory(true));
         this.sellInventory.addPage(createInventory(false));
-        this.buyItems = new ArrayList<>(buyItems);
-        this.sellItems = new ArrayList<>(sellItems);
+        this.buyItems = new HashMap<>(buyItems);
+        this.sellItems = new HashMap<>(sellItems);
 
         loadInventory(this.buyItems, true);
         loadInventory(this.sellItems, false);
@@ -191,13 +186,39 @@ public class Merchant implements Cloneable {
         this.type = type;
     }
 
-    public void addBuyItem(MarketItemStack marketItemStack) {
-        buyItems.add(marketItemStack);
+    public boolean containsBuyItem(ItemStack itemStack) {
+        return containsItem(itemStack, true);
+    }
+
+    public boolean containsSellItem(ItemStack itemStack) {
+        return containsItem(itemStack, false);
+    }
+
+    private boolean containsItem(ItemStack itemStack, boolean isBuy) {
+        IPagedInventory iPagedInventory = isBuy ? buyInventory : sellInventory;
+
+        for (Inventory inventory : iPagedInventory) {
+            for (ItemStack stack : inventory) {
+                MarketItemInfo marketItemInfo = isBuy ? buyItems.get(stack) : sellItems.get(stack);
+                if (marketItemInfo.getOriginal().isSimilar(itemStack))
+                    return true;
+            }
+        }
+
+        return false;
+    }
+
+    public void addBuyItem(ItemStack marketItemStack, MarketItemInfo marketItemInfo, boolean addLore) {
+        if (addLore)
+            setMeta(marketItemStack, marketItemInfo, true);
+        buyItems.put(marketItemStack, marketItemInfo);
         addItem(marketItemStack, true);
     }
 
-    public void addSellItem(MarketItemStack marketItemStack) {
-        sellItems.add(marketItemStack);
+    public void addSellItem(ItemStack marketItemStack, MarketItemInfo marketItemInfo, boolean addLore) {
+        if (addLore)
+            setMeta(marketItemStack, marketItemInfo, false);
+        sellItems.put(marketItemStack, marketItemInfo);
         addItem(marketItemStack, false);
     }
 
@@ -217,15 +238,15 @@ public class Merchant implements Cloneable {
         inventory.setItem(slot, null);
 
         if (isBuyInventory) {
-            buyItems.removeIf(marketItemStack -> marketItemStack.equals(itemStack));
+            buyItems.keySet().removeIf(is -> is.equals(itemStack));
             reorderBuyInventory();
         } else {
-            sellItems.removeIf(marketItemStack -> marketItemStack.equals(itemStack));
+            sellItems.keySet().removeIf(is -> is.equals(itemStack));
             reorderSellInventory();
         }
     }
 
-    private void addItem(MarketItemStack marketItemStack, boolean isBuyItem) {
+    private void addItem(ItemStack marketItemStack, boolean isBuyItem) {
         Inventory inventory = isBuyItem ? buyInventory.getPage(buyInventory.getSize() - 1) :
                 sellInventory.getPage(sellInventory.getSize() - 1);
 
@@ -239,14 +260,13 @@ public class Merchant implements Cloneable {
             }
         }
 
-        setMeta(marketItemStack, isBuyItem);
         inventory.addItem(marketItemStack);
     }
 
-    private void setMeta(MarketItemStack marketItemStack, boolean isBuyItem) {
-        ItemMeta itemMeta = marketItemStack.getItemMeta();
+    private void setMeta(ItemStack itemStack, MarketItemInfo marketItemInfo, boolean isBuyItem) {
+        ItemMeta itemMeta = itemStack.getItemMeta();
         List<String> lore = itemMeta.hasLore() ? itemMeta.getLore() : new ArrayList<>(2);
-        lore.add(ChatColor.GREEN + "$" + marketItemStack.getPrice());
+        lore.add(ChatColor.GREEN + "$" + marketItemInfo.getPrice());
 
         if (isBuyItem) {
             lore.add(ChatColor.GREEN + "" + ChatColor.BOLD + "CLICK TO BUY");
@@ -255,7 +275,7 @@ public class Merchant implements Cloneable {
         }
 
         itemMeta.setLore(lore);
-        marketItemStack.setItemMeta(itemMeta);
+        itemStack.setItemMeta(itemMeta);
     }
 
     private Inventory createInventory(boolean isBuy) {
@@ -264,25 +284,28 @@ public class Merchant implements Cloneable {
 
     private void reorderBuyInventory() {
         Map<Player, Integer> viewers = getViewers(buyInventory);
+        pagedInventoryAPI.getRegistrar().unregisterHandlers(buyInventory);
         buyInventory = pagedInventoryAPI.createPagedInventory(NEXT_ITEMSTACK, PREV_ITEMSTACK, CLOSE_ITEMSTACK);
         buyInventory.addPage(createInventory(true));
-        loadInventory(this.buyItems, true);
+        loadInventory(buyItems, true);
+        pagedInventoryAPI.getRegistrar().addClickHandler(buyInventory, clickHandler);
         setViewers(viewers, buyInventory);
     }
 
     private void reorderSellInventory() {
         Map<Player, Integer> viewers = getViewers(sellInventory);
+        pagedInventoryAPI.getRegistrar().unregisterHandlers(sellInventory);
         sellInventory = pagedInventoryAPI.createPagedInventory(NEXT_ITEMSTACK, PREV_ITEMSTACK, CLOSE_ITEMSTACK);
         sellInventory.addPage(createInventory(false));
         loadInventory(this.sellItems, false);
         setViewers(viewers, sellInventory);
     }
 
-    private void loadInventory(List<MarketItemStack> items, boolean isBuy) {
+    private void loadInventory(Map<ItemStack, MarketItemInfo> items, boolean isBuy) {
         if (isBuy) {
-            items.forEach(this::addBuyItem);
+            items.forEach((itemStack, marketItemInfo) -> addBuyItem(itemStack, marketItemInfo, false));
         } else {
-            items.forEach(this::addSellItem);
+            items.forEach((itemStack, marketItemInfo) -> addSellItem(itemStack, marketItemInfo, false));
         }
     }
 
