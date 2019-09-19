@@ -114,9 +114,8 @@ public class AdaptiveMarketsCommand extends BaseCommand {
             return;
         }
 
-        ItemStack clone = holding.clone();
-        MarketItemInfo marketItemInfo = new MarketItemInfo(clone, price, priceChange, minPrice, maxPrice, priceChangeCondition, supply);
-        merchant.addBuyItem(clone, marketItemInfo, true);
+        MarketItemInfo marketItemInfo = new MarketItemInfo(holding.clone(), price, priceChange, minPrice, maxPrice, priceChangeCondition, supply);
+        merchant.addBuyItem(holding.clone(), marketItemInfo, true);
         player.sendMessage(ChatColor.GREEN + "Successfully added item to merchant's buy inventory!");
     }
 
@@ -146,9 +145,8 @@ public class AdaptiveMarketsCommand extends BaseCommand {
             return;
         }
 
-        ItemStack clone = holding.clone();
-        MarketItemInfo marketItemStack = new MarketItemInfo(clone, price, priceChange, minPrice, maxPrice, priceChangeCondition, supply);
-        merchant.addSellItem(clone, marketItemStack, true);
+        MarketItemInfo marketItemStack = new MarketItemInfo(holding.clone(), price, priceChange, minPrice, maxPrice, priceChangeCondition, supply);
+        merchant.addSellItem(holding.clone(), marketItemStack, true);
         player.sendMessage(ChatColor.GREEN + "Successfully added item to merchant's sell inventory!");
     }
 

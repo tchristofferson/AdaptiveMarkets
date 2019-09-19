@@ -11,6 +11,8 @@ import org.bukkit.Material;
 import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Villager;
+import org.bukkit.event.inventory.ClickType;
+import org.bukkit.event.inventory.InventoryAction;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
@@ -48,6 +50,7 @@ public class Merchant implements Cloneable {
 
             @Override
             public void handle(Handler handler) {
+                if (handler.getEvent().getClick() == ClickType.DOUBLE_CLICK) return;
                 Player player = handler.getPlayer();
                 InventoryClickEvent event = handler.getEvent();
                 PlayerManager playerManager = adaptiveMarkets.getPlayerManager();
@@ -68,44 +71,52 @@ public class Merchant implements Cloneable {
                         return;
 
                     String inventoryName = ChatColor.stripColor(event.getView().getTitle());
-                    IPagedInventory pagedInventory = handler.getPagedInventory();
-                    int page = -1;
-
-                    for (int i = 0; i < pagedInventory.getSize(); i++) {
-                        if (pagedInventory.getPage(i).equals(event.getClickedInventory())) {
-                            page = i;
-                            break;
-                        }
-                    }
-
                     Merchant merchant = playerManager.getCurrentMerchant(player);
-                    int index = getIndex(page, event.getSlot());
 
                     if (inventoryName.endsWith(" - Buy")) {
-                        //TODO: Use vault to take from player balance
                         MarketItemInfo marketItemInfo = merchant.buyItems.get(clickedItem);
+                        if (marketItemInfo.getSupply() == 0) {
+                            player.sendMessage(ChatColor.RED + "That item is out of stock!");
+                            return;
+                        }
+
                         if (adaptiveMarkets.getEconomy().getBalance(player) >= marketItemInfo.getPrice()) {
                             Bukkit.getScheduler().runTask(adaptiveMarkets, () -> {
-                                Map<Integer, ItemStack> notAdded = player.getInventory().addItem(clickedItem);
+                                Map<Integer, ItemStack> notAdded = player.getInventory().addItem(marketItemInfo.getOriginal());
                                 if (notAdded.isEmpty()) {
+                                    marketItemInfo.setSupply(marketItemInfo.getSupply() - 1);
                                     adaptiveMarkets.getEconomy().withdrawPlayer(player, marketItemInfo.getPrice());
                                     player.sendMessage(ChatColor.GREEN + "Successfully bought item for $" + marketItemInfo.getPrice());
+                                } else {
+                                    player.sendMessage(ChatColor.RED + "You don't have enough inventory space!");
                                 }
                             });
+                        } else {
+                            player.sendMessage(ChatColor.RED + "Insufficient funds!");
                         }
-                    } else if (inventoryName.endsWith(" - Sell") && !clickedInventory.equals(player.getInventory())) {
-                        //TODO: Use vault to add to player's balance
+                    } else if (inventoryName.endsWith(" - Sell") && !clickedInventory.equals(player.getInventory())) {//FIXME: Won't sell
+                        //TODO: Check supply
                         Inventory playerInventory = player.getInventory();
+                        MarketItemInfo marketItemInfo = merchant.sellItems.get(clickedItem);
 
                         for (int i = 0; i < playerInventory.getSize(); i++) {
                             ItemStack is = playerInventory.getItem(i);
 
-                            if (clickedItem.isSimilar(is)) {
-                                is.setAmount(is.getAmount() - 1);
-                                playerInventory.setItem(i, is);
-                                break;
+                            if (marketItemInfo.getOriginal().isSimilar(is)) {
+                                if (is.getAmount() >= clickedItem.getAmount()) {
+                                    adaptiveMarkets.getEconomy().depositPlayer(player, marketItemInfo.getPrice());
+                                    is.setAmount(is.getAmount() - clickedItem.getAmount());
+                                    playerInventory.setItem(i, is);
+                                    player.sendMessage(ChatColor.GREEN + "Successfully sold item(s) for $" + marketItemInfo.getPrice());
+                                } else {
+                                    player.sendMessage(ChatColor.RED + "You don't have enough of that item to sell!");
+                                }
+
+                                return;
                             }
                         }
+
+                        player.sendMessage(ChatColor.RED + "You can't sell what you don't have!");
                     }
 
                     return;
